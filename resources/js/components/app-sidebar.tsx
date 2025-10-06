@@ -10,41 +10,45 @@ import {
     SidebarMenuButton,
     SidebarMenuItem,
 } from '@/components/ui/sidebar';
-import { dashboard } from '@/routes';
-import { type NavItem } from '@/types';
-import { Link } from '@inertiajs/react';
-import { BookOpen, Folder, LayoutGrid } from 'lucide-react';
+import { bookmarkedRecipes, login, myRecipes, register } from '@/routes';
+import recipes from '@/routes/recipes';
+import { SharedData, type NavItem } from '@/types';
+import { Link, usePage } from '@inertiajs/react';
+import { Bookmark, BookOpenTextIcon, BookText } from 'lucide-react';
 import AppLogo from './app-logo';
+import { Button } from './ui/button';
 
 const mainNavItems: NavItem[] = [
     {
-        title: 'Dashboard',
-        href: dashboard(),
-        icon: LayoutGrid,
+        title: 'Recipes',
+        href: recipes.index(),
+        icon: BookOpenTextIcon,
+    },
+    {
+        title: 'Bookmarked',
+        href: bookmarkedRecipes(),
+        icon: Bookmark,
     },
 ];
 
 const footerNavItems: NavItem[] = [
     {
-        title: 'Repository',
-        href: 'https://github.com/laravel/react-starter-kit',
-        icon: Folder,
-    },
-    {
-        title: 'Documentation',
-        href: 'https://laravel.com/docs/starter-kits#react',
-        icon: BookOpen,
+        title: 'My recipes',
+        href: myRecipes(),
+        icon: BookText,
     },
 ];
 
 export function AppSidebar() {
+    const { auth } = usePage<SharedData>().props;
+
     return (
         <Sidebar collapsible="icon" variant="inset">
             <SidebarHeader>
                 <SidebarMenu>
                     <SidebarMenuItem>
                         <SidebarMenuButton size="lg" asChild>
-                            <Link href={dashboard()} prefetch>
+                            <Link href={recipes.index()} prefetch>
                                 <AppLogo />
                             </Link>
                         </SidebarMenuButton>
@@ -58,7 +62,18 @@ export function AppSidebar() {
 
             <SidebarFooter>
                 <NavFooter items={footerNavItems} className="mt-auto" />
-                <NavUser />
+                {auth.user ? (
+                    <NavUser />
+                ) : (
+                    <>
+                        <Button asChild>
+                            <Link href={login()}>Log in</Link>
+                        </Button>
+                        <Button asChild variant={'outline'}>
+                            <Link href={register()}>Register</Link>
+                        </Button>
+                    </>
+                )}
             </SidebarFooter>
         </Sidebar>
     );

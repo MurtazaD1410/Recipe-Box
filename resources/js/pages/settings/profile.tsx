@@ -7,9 +7,11 @@ import { Form, Head, Link, usePage } from '@inertiajs/react';
 import DeleteUser from '@/components/delete-user';
 import HeadingSmall from '@/components/heading-small';
 import InputError from '@/components/input-error';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
 import AppLayout from '@/layouts/app-layout';
 import SettingsLayout from '@/layouts/settings/layout';
 import { edit } from '@/routes/profile';
@@ -24,11 +26,15 @@ const breadcrumbs: BreadcrumbItem[] = [
 export default function Profile({
     mustVerifyEmail,
     status,
+    avatar,
 }: {
     mustVerifyEmail: boolean;
     status?: string;
+    avatar?: string | null;
 }) {
     const { auth } = usePage<SharedData>().props;
+
+    console.log(avatar);
 
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
@@ -50,6 +56,27 @@ export default function Profile({
                     >
                         {({ processing, recentlySuccessful, errors }) => (
                             <>
+                                {avatar && (
+                                    <Avatar className="size-32">
+                                        <AvatarImage src={avatar} />
+                                        <AvatarFallback>
+                                            {auth.user.name[0].toUpperCase()}
+                                        </AvatarFallback>
+                                    </Avatar>
+                                )}
+                                <div className="grid gap-2">
+                                    <Label htmlFor="image">Image</Label>
+                                    <Input
+                                        id="image"
+                                        name="image"
+                                        type="file"
+                                        className="mt-1 block w-full"
+                                    />
+                                    <InputError
+                                        message={errors.title}
+                                        className="mt-2"
+                                    />
+                                </div>
                                 <div className="grid gap-2">
                                     <Label htmlFor="name">Name</Label>
 
@@ -66,6 +93,24 @@ export default function Profile({
                                     <InputError
                                         className="mt-2"
                                         message={errors.name}
+                                    />
+                                </div>
+                                <div className="grid gap-2">
+                                    <Label htmlFor="username">Username</Label>
+
+                                    <Input
+                                        id="username"
+                                        className="mt-1 block w-full"
+                                        defaultValue={auth.user.username}
+                                        name="username"
+                                        required
+                                        autoComplete="username"
+                                        placeholder="Username"
+                                    />
+
+                                    <InputError
+                                        className="mt-2"
+                                        message={errors.username}
                                     />
                                 </div>
 
@@ -86,6 +131,25 @@ export default function Profile({
                                     <InputError
                                         className="mt-2"
                                         message={errors.email}
+                                    />
+                                </div>
+                                <div className="grid gap-2">
+                                    <Label htmlFor="bio">Bio</Label>
+
+                                    <Textarea
+                                        rows={5}
+                                        id="bio"
+                                        className="mt-1 block w-full"
+                                        defaultValue={auth.user.bio}
+                                        name="bio"
+                                        required
+                                        autoComplete="username"
+                                        placeholder="Bio address"
+                                    />
+
+                                    <InputError
+                                        className="mt-2"
+                                        message={errors.bio}
                                     />
                                 </div>
 
