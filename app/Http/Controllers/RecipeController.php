@@ -16,16 +16,33 @@ class RecipeController extends Controller
   /**
    * Display a listing of the resource.
    */
-  public function index()
+  public function index(Request $request)
   {
 
-    $recipes = Recipe::with('user', 'categories')
+    $search = $request->query('search');
+    $query = Recipe::with('user', 'categories')
       ->where('user_id', '!=', auth()->id())
-      ->latest()
-      ->paginate(10)
+      ->latest();
+
+    if ($search) {
+      $query->where(function ($q) use ($search) {
+        $q->where('title', 'like', "%{$search}%")
+          ->orWhere('ingredients', 'like', "%{$search}%");
+      });
+    }
+
+    $recipes = $query->paginate(10)
       ->through(fn($recipe) => $recipe->toApiArray());
+
+
     $categories = Category::all();
-    return Inertia::render('recipes/index', ['recipes' => $recipes, 'categories' => $categories, 'page_title' => 'Recipes', 'context' => 'all']);
+    return Inertia::render('recipes/index', [
+      'recipes' => $recipes,
+      'categories' => $categories,
+      'page_title' => 'Recipes',
+      'context' => 'all',
+      'search' => $search
+    ]);
   }
 
   /**
@@ -69,7 +86,7 @@ class RecipeController extends Controller
   public function show(string $username, Recipe $recipe)
   {
     return Inertia::render('recipes/show', [
-      'recipe' => $recipe->toApiArray($recipe),
+      'recipe' => $recipe->toApiArray(),
       'auth' => [
         'user' => auth()->user() ? auth()->user() : null
       ]
@@ -141,32 +158,65 @@ class RecipeController extends Controller
     return redirect()->route('my-recipes')->with('success', 'Recipe deleted successfully.');
   }
 
-  public function myRecipes()
+  public function myRecipes(Request $request)
   {
     $user = auth()->user();
+    $search = $request->query('search');
 
     $query = $user->recipes()->with(['user', 'media', 'categories'])->latest();
     $categories = Category::all();
 
+    if ($search) {
+      $query = $query->where(function ($q) use ($search) {
+        $q->where('title', 'like', "%{$search}%")
+          ->orWhere('ingredients', 'like', "%{$search}%");
+      });
+    }
+
+
     $recipes = $query->paginate(10)
       ->through(fn($recipe) => $recipe->toApiArray());
 
-    return Inertia::render('recipes/index', ['recipes' => $recipes, 'categories' => $categories, 'page_title' => 'My Recipes', 'context' => 'my-recipes']);
+    return Inertia::render('recipes/index', [
+      'recipes' => $recipes,
+      'categories' => $categories,
+      'page_title' => 'My Recipes',
+      'context' => 'my-recipes',
+      'search' => $search
+    ]);
   }
 
-  public function getBookmarkedRecipes()
+  public function getBookmarkedRecipes(Request $request)
   {
 
+    $search = $request->query('search');
     $user = auth()->user();
     $categories = Category::all();
-    $recipes = $user
+
+    $query = $user
       ->bookmarkedRecipes()  // Get recipes directly, not bookmarks
       ->with('user')
-      ->latest('bookmarks.created_at')
+      ->latest('bookmarks.created_at');
+
+
+    if ($search) {
+      $query = $query->where(function ($q) use ($search) {
+        $q->where('title', 'like', "%{$search}%")
+          ->orWhere('ingredients', 'like', "%{$search}%");
+      });
+    }
+
+    $recipes = $query
       ->paginate(10)
       ->through(fn($recipe) => $recipe->toApiArray());
 
 
-    return Inertia::render('recipes/index', ['recipes' => $recipes, 'categories' => $categories, 'page_title' => 'Bookmarked Recipes', 'context' => 'bookmarked-recipes']);
+    return Inertia::render('recipes/index', [
+      'recipes' => $recipes,
+      'categories' => $categories,
+      'page_title' => 'Bookmarked Recipes',
+      'context' => 'bookmarked-recipes',
+      'search' => $search
+    ]);
   }
 }

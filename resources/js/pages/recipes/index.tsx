@@ -10,31 +10,76 @@ import {
   EmptyMedia,
   EmptyTitle,
 } from '@/components/ui/empty';
+import { Input } from '@/components/ui/input';
 import AppLayout from '@/layouts/app-layout';
 import recipes from '@/routes/recipes';
 import { BreadcrumbItem } from '@/types';
 import { Category, RecipePaginatedResults } from '@/types/types';
-
+import { Inertia } from '@inertiajs/inertia';
 import { Head } from '@inertiajs/react';
-import { BookMarked, BookTextIcon, PlusSquare } from 'lucide-react';
+import { BookMarked, BookTextIcon, PlusSquare, Search } from 'lucide-react';
+import { useEffect, useState } from 'react';
 
 const RecipeIndex = ({
   recipes: recipesList,
   categories,
   context,
   page_title,
+  search,
 }: {
   recipes: RecipePaginatedResults;
   categories: Category[];
   context: string;
   page_title: string;
+  search?: string;
 }) => {
+  const [searchQuery, setSearchQuery] = useState('helloo');
   const breadcrumbs: BreadcrumbItem[] = [
     {
       title: page_title,
       href: recipes.index().url,
     },
   ];
+
+  useEffect(() => {
+    setSearchQuery(search || '');
+  }, [search]);
+
+  // function onSearchSubmit(query: string) {
+  //   switch (context) {
+  //     case 'my-recipes':
+  //       return Inertia.get(
+  //         myRecipes().url,
+  //         { search: query },
+  //         { preserveState: true },
+  //       );
+  //     case 'bookmarked-recipes':
+  //       return Inertia.get(
+  //         bookmarkedRecipes().url,
+  //         { search: query },
+  //         { preserveState: true },
+  //       );
+  //     default:
+  //       Inertia.get(
+  //         recipes.index().url,
+  //         { search: query },
+  //         { preserveState: true },
+  //       );
+  //   }
+  // }
+  function onSearchSubmit(query: string) {
+    const currentUrl = window.location.pathname;
+    const currentParams = new URLSearchParams(window.location.search);
+
+    // Add/update the search query
+    currentParams.set('search', query);
+
+    Inertia.get(
+      `${currentUrl}?${currentParams.toString()}`,
+      {},
+      { preserveState: true },
+    );
+  }
 
   const formatLabel = (text: string) =>
     text
@@ -52,7 +97,7 @@ const RecipeIndex = ({
               ? formatLabel(context)
               : page_title}
           </span>
-          {page_title === 'My Recipes' && (
+          {(page_title === 'My Recipes' || context === 'my-recipes') && (
             <Button asChild>
               <a href={'/recipes/create'}>
                 <PlusSquare className="size-4" />
@@ -60,6 +105,23 @@ const RecipeIndex = ({
               </a>
             </Button>
           )}
+        </div>
+        <div className="flex flex-row gap-4">
+          <Input
+            className="flex-1"
+            value={searchQuery}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') onSearchSubmit(searchQuery);
+            }}
+            onChange={(e) => setSearchQuery(e.target.value)}
+          />
+          <Button
+            variant={'outline'}
+            onClick={() => onSearchSubmit(searchQuery)}
+          >
+            <Search />
+            Search
+          </Button>
         </div>
         <CategoryTabs categories={categories} context={context} />
         {(recipesList.data ?? []).length > 0 ? (
