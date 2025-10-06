@@ -10,6 +10,7 @@ class CategoryController extends Controller
 {
     public function show(Category $category, Request $request)
     {
+        $search = $request->query('search');
         $context = $request->query('from');
         $user = auth()->user();
 
@@ -32,6 +33,16 @@ class CategoryController extends Controller
             $pageTitle = $category->name . ' Recipes';
         }
 
+
+        if ($search) {
+            $query = $query->where(function ($q) use ($search) {
+                $q->where('title', 'like', "%{$search}%")
+                    ->orWhere('ingredients', 'like', "%{$search}%");
+            });
+        }
+
+
+
         // 🧠 Step 2: Load related data and paginate
         $recipes = $query
             ->with(['user', 'categories'])
@@ -49,6 +60,7 @@ class CategoryController extends Controller
             'categories' => $categories,
             'page_title' => $pageTitle,
             'context' => $context,
+            'search' => $search
         ]);
     }
 }
