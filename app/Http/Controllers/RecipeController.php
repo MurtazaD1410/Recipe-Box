@@ -4,9 +4,11 @@ namespace App\Http\Controllers;
 
 use App\Http\Requests\StoreRecipeRequest;
 use App\Http\Requests\UpdateRecipeRequest;
+use App\Models\Category;
 use App\Models\Recipe;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
 
 class RecipeController extends Controller
@@ -17,7 +19,7 @@ class RecipeController extends Controller
   public function index()
   {
 
-    $recipes = Recipe::with('user')
+    $recipes = Recipe::with('user', 'categories')
       ->where('user_id', '!=', auth()->id())
       ->latest()
       ->paginate(10)
@@ -34,6 +36,13 @@ class RecipeController extends Controller
             'avatarPreview' => $recipe->user->imageUrl('avatar'),
             'avatarLarge' => $recipe->user->imageUrl('large'),
           ],
+          'categories' => $recipe->categories->map(function ($category) {
+            return [
+              'id' => $category->id,
+              'name' => $category->name,
+              'slug' => $category->slug,
+            ];
+          }),
           'cooking_time' => $recipe->cooking_time,
           'serves' => $recipe->serves,
           'created_at' => $recipe->created_at,
@@ -52,7 +61,10 @@ class RecipeController extends Controller
    */
   public function create()
   {
-    return Inertia::render('recipes/create');
+    $categories = Category::all();
+    return Inertia::render('recipes/create', [
+      'categories' => $categories, // <-- Add this line
+    ]);
   }
 
   /**
@@ -60,18 +72,24 @@ class RecipeController extends Controller
    */
   public function store(StoreRecipeRequest $storeRecipeRequest)
   {
-    $data = $storeRecipeRequest->validated();
+    $validated = $storeRecipeRequest->validated();
 
-    $data['user_id'] = auth()->user()->id;
+    DB::transaction(function () use ($validated, $storeRecipeRequest) {
 
-    $recipe = Recipe::create($data);
-    if ($storeRecipeRequest->hasFile('image')) {
-      $recipe->addMediaFromRequest('image')->toMediaCollection('images');
-    }
+      $recipe = $storeRecipeRequest->user()->recipes()->create($validated);
 
+      if ($storeRecipeRequest->hasFile('image')) {
+        $recipe->addMediaFromRequest('image')->toMediaCollection('images');
+      }
 
-    return redirect()->route('my-recipes', [])->with('success', 'Recipe created successfully.');
+      if (!empty($validated['category_ids'])) {
+        $recipe->categories()->sync($validated['category_ids']);
+      }
+    });
+
+    return redirect()->route('my-recipes')->with('success', 'Recipe created successfully!');
   }
+
 
   /**
    * Display the specified resource.
@@ -86,12 +104,18 @@ class RecipeController extends Controller
         'description' => $recipe->description,
         'ingredients' => $recipe->ingredients,
         'instructions' => $recipe->instructions,
-        // 'user' => $recipe->user,
         'user' => [
           ...$recipe->user->toArray(),
           'avatarPreview' => $recipe->user->imageUrl('avatar'),
           'avatarLarge' => $recipe->user->imageUrl('large'),
         ],
+        'categories' => $recipe->categories->map(function ($category) {
+          return [
+            'id' => $category->id,
+            'name' => $category->name,
+            'slug' => $category->slug,
+          ];
+        }),
         'cooking_time' => $recipe->cooking_time,
         'serves' => $recipe->serves,
         'created_at' => $recipe->created_at,
@@ -114,6 +138,9 @@ class RecipeController extends Controller
     if ($recipe->user_id != Auth::user()->id) {
       abort(403);
     }
+
+    $categories = Category::all();
+
     return Inertia::render('recipes/edit', [
       'recipe' => [
         'id' => $recipe->id,
@@ -125,6 +152,13 @@ class RecipeController extends Controller
         'user' => $recipe->user,
         'cooking_time' => $recipe->cooking_time,
         'serves' => $recipe->serves,
+        'categories' => $recipe->categories->map(function ($category) {
+          return [
+            'id' => $category->id,
+            'name' => $category->name,
+            'slug' => $category->slug,
+          ];
+        }),
         'created_at' => $recipe->created_at,
         'image_preview' => $recipe->imageUrl('preview'),
         'image_large' => $recipe->imageUrl('large'),
@@ -133,7 +167,8 @@ class RecipeController extends Controller
       ],
       'auth' => [
         'user' => auth()->user() ? auth()->user() : null
-      ]
+      ],
+      'categories' => $categories,
     ]);
   }
 
@@ -148,13 +183,25 @@ class RecipeController extends Controller
 
     $data = $updateRecipeRequest->validated();
 
-    $recipe->update($data);
+    DB::transaction(function () use ($data, $updateRecipeRequest, $recipe) {
 
-    if ($data['image'] ?? false) {
-      $recipe->addMediaFromRequest('image')->toMediaCollection('images');
-    }
+      $recipe->update($data);
 
-    return redirect()->route('my-recipes')->with('success', 'Recipe updated successfully.');
+      if ($updateRecipeRequest->hasFile('image')) {
+        $recipe->clearMediaCollection('images');
+
+        $recipe->addMediaFromRequest('image')->toMediaCollection('images');
+      }
+
+      if ($updateRecipeRequest->has('category_ids')) {
+        $recipe->categories()->sync($updateRecipeRequest->input('category_ids', []));
+      } else {
+        $recipe->categories()->detach();
+      }
+
+    });
+
+    return redirect()->route('my-recipes')->with('success', 'Recipe updated successfully!');
   }
 
   /**
@@ -174,7 +221,7 @@ class RecipeController extends Controller
   {
     $user = auth()->user();
 
-    $query = $user->recipes()->with(['user', 'media'])->latest();
+    $query = $user->recipes()->with(['user', 'media', 'categories'])->latest();
 
     $recipes = $query->paginate(10)
       ->through(function ($recipe) {
@@ -185,12 +232,18 @@ class RecipeController extends Controller
           'description' => $recipe->description,
           'ingredients' => $recipe->ingredients,
           'instructions' => $recipe->instructions,
-          // 'user' => $recipe->user,
           'user' => [
             ...$recipe->user->toArray(),
             'avatarPreview' => $recipe->user->imageUrl('avatar'),
             'avatarLarge' => $recipe->user->imageUrl('large'),
           ],
+          'categories' => $recipe->categories->map(function ($category) {
+            return [
+              'id' => $category->id,
+              'name' => $category->name,
+              'slug' => $category->slug,
+            ];
+          }),
           'cooking_time' => $recipe->cooking_time,
           'serves' => $recipe->serves,
           'created_at' => $recipe->created_at,
