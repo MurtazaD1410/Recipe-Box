@@ -23,37 +23,9 @@ class RecipeController extends Controller
       ->where('user_id', '!=', auth()->id())
       ->latest()
       ->paginate(10)
-      ->through(function ($recipe) {
-        return [
-          'id' => $recipe->id,
-          'title' => $recipe->title,
-          'slug' => $recipe->slug,
-          'description' => $recipe->description,
-          'ingredients' => $recipe->ingredients,
-          'instructions' => $recipe->instructions,
-          'user' => [
-            ...$recipe->user->toArray(),
-            'avatarPreview' => $recipe->user->imageUrl('avatar'),
-            'avatarLarge' => $recipe->user->imageUrl('large'),
-          ],
-          'categories' => $recipe->categories->map(function ($category) {
-            return [
-              'id' => $category->id,
-              'name' => $category->name,
-              'slug' => $category->slug,
-            ];
-          }),
-          'cooking_time' => $recipe->cooking_time,
-          'serves' => $recipe->serves,
-          'created_at' => $recipe->created_at,
-          'updated_at' => $recipe->updated_at,
-          'image_preview' => $recipe->imageUrl('preview'), // 500px
-          'image_large' => $recipe->imageUrl('large'), // 1200px
-          'has_image' => ($recipe->imageUrl()) !== null,
-          'has_bookmarked' => auth()->user()?->hasBookmarked($recipe) ? true : false,
-        ];
-      });
-    return Inertia::render('recipes/index', ['recipes' => $recipes, 'page_title' => 'Recipes']);
+      ->through(fn($recipe) => $recipe->toApiArray());
+    $categories = Category::all();
+    return Inertia::render('recipes/index', ['recipes' => $recipes, 'categories' => $categories, 'page_title' => 'Recipes', 'context' => 'all']);
   }
 
   /**
@@ -97,33 +69,7 @@ class RecipeController extends Controller
   public function show(string $username, Recipe $recipe)
   {
     return Inertia::render('recipes/show', [
-      'recipe' => [
-        'id' => $recipe->id,
-        'title' => $recipe->title,
-        'slug' => $recipe->slug,
-        'description' => $recipe->description,
-        'ingredients' => $recipe->ingredients,
-        'instructions' => $recipe->instructions,
-        'user' => [
-          ...$recipe->user->toArray(),
-          'avatarPreview' => $recipe->user->imageUrl('avatar'),
-          'avatarLarge' => $recipe->user->imageUrl('large'),
-        ],
-        'categories' => $recipe->categories->map(function ($category) {
-          return [
-            'id' => $category->id,
-            'name' => $category->name,
-            'slug' => $category->slug,
-          ];
-        }),
-        'cooking_time' => $recipe->cooking_time,
-        'serves' => $recipe->serves,
-        'created_at' => $recipe->created_at,
-        'image_preview' => $recipe->imageUrl('preview'),
-        'image_large' => $recipe->imageUrl('large'),
-        'has_image' => ($recipe->imageUrl()) !== null,
-        'has_bookmarked' => auth()->user()?->hasBookmarked($recipe) ? true : false,
-      ],
+      'recipe' => $recipe->toApiArray($recipe),
       'auth' => [
         'user' => auth()->user() ? auth()->user() : null
       ]
@@ -142,29 +88,7 @@ class RecipeController extends Controller
     $categories = Category::all();
 
     return Inertia::render('recipes/edit', [
-      'recipe' => [
-        'id' => $recipe->id,
-        'title' => $recipe->title,
-        'slug' => $recipe->slug,
-        'description' => $recipe->description,
-        'ingredients' => $recipe->ingredients,
-        'instructions' => $recipe->instructions,
-        'user' => $recipe->user,
-        'cooking_time' => $recipe->cooking_time,
-        'serves' => $recipe->serves,
-        'categories' => $recipe->categories->map(function ($category) {
-          return [
-            'id' => $category->id,
-            'name' => $category->name,
-            'slug' => $category->slug,
-          ];
-        }),
-        'created_at' => $recipe->created_at,
-        'image_preview' => $recipe->imageUrl('preview'),
-        'image_large' => $recipe->imageUrl('large'),
-        'has_image' => ($recipe->imageUrl()) !== null,
-        'has_bookmarked' => auth()->user()->hasBookmarked($recipe) ? true : false,
-      ],
+      'recipe' => $recipe->toApiArray(),
       'auth' => [
         'user' => auth()->user() ? auth()->user() : null
       ],
@@ -222,76 +146,27 @@ class RecipeController extends Controller
     $user = auth()->user();
 
     $query = $user->recipes()->with(['user', 'media', 'categories'])->latest();
+    $categories = Category::all();
 
     $recipes = $query->paginate(10)
-      ->through(function ($recipe) {
-        return [
-          'id' => $recipe->id,
-          'title' => $recipe->title,
-          'slug' => $recipe->slug,
-          'description' => $recipe->description,
-          'ingredients' => $recipe->ingredients,
-          'instructions' => $recipe->instructions,
-          'user' => [
-            ...$recipe->user->toArray(),
-            'avatarPreview' => $recipe->user->imageUrl('avatar'),
-            'avatarLarge' => $recipe->user->imageUrl('large'),
-          ],
-          'categories' => $recipe->categories->map(function ($category) {
-            return [
-              'id' => $category->id,
-              'name' => $category->name,
-              'slug' => $category->slug,
-            ];
-          }),
-          'cooking_time' => $recipe->cooking_time,
-          'serves' => $recipe->serves,
-          'created_at' => $recipe->created_at,
-          'updated_at' => $recipe->updated_at,
-          'image_preview' => $recipe->imageUrl('preview'), // 500px
-          'image_large' => $recipe->imageUrl('large'), // 1200px
-          'has_image' => ($recipe->imageUrl()) !== null,
-          'has_bookmarked' => auth()->user()->hasBookmarked($recipe) ? true : false,
+      ->through(fn($recipe) => $recipe->toApiArray());
 
-        ];
-      });
-
-    return Inertia::render('recipes/index', ['recipes' => $recipes, 'page_title' => 'My Recipes']);
+    return Inertia::render('recipes/index', ['recipes' => $recipes, 'categories' => $categories, 'page_title' => 'My Recipes', 'context' => 'my-recipes']);
   }
 
   public function getBookmarkedRecipes()
   {
 
     $user = auth()->user();
+    $categories = Category::all();
     $recipes = $user
       ->bookmarkedRecipes()  // Get recipes directly, not bookmarks
       ->with('user')
       ->latest('bookmarks.created_at')
       ->paginate(10)
-      ->through(function ($recipe) {  // Now $recipe is actually a Recipe model
-        return [
-          'id' => $recipe->id,
-          'title' => $recipe->title,
-          'description' => $recipe->description,
-          'ingredients' => $recipe->ingredients,
-          'instructions' => $recipe->instructions,
-          'user' => [
-            ...$recipe->user->toArray(),
-            'avatarPreview' => $recipe->user->imageUrl('avatar'),
-            'avatarLarge' => $recipe->user->imageUrl('large'),
-          ],
-          'cooking_time' => $recipe->cooking_time,
-          'serves' => $recipe->serves,
-          'created_at' => $recipe->created_at,
-          'updated_at' => $recipe->updated_at,
-          'image_preview' => $recipe->imageUrl('preview'),
-          'image_large' => $recipe->imageUrl('large'),
-          'has_image' => $recipe->imageUrl() !== null,
-          'has_bookmarked' => true,
-        ];
-      });
+      ->through(fn($recipe) => $recipe->toApiArray());
 
 
-    return Inertia::render('recipes/index', ['recipes' => $recipes, 'page_title' => 'Bookmarked Recipes']);
+    return Inertia::render('recipes/index', ['recipes' => $recipes, 'categories' => $categories, 'page_title' => 'Bookmarked Recipes', 'context' => 'bookmarked-recipes']);
   }
 }
