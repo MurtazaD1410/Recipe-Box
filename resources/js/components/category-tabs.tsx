@@ -55,11 +55,7 @@ const CategoryTabs = ({ categories, context = 'all' }: Props) => {
       {categories.map((category) => {
         const isActive = currentSlug === category.slug;
         return (
-<<<<<<< HEAD
-          <li className="">
-=======
           <li className="" key={category.id}>
->>>>>>> 10ccb6cce76c6959c125915dc3e4a5dabf40a025
             <a
               href={generateCategoryUrl(category.slug)}
               className={`inline-block rounded-lg px-4 py-3 ${
