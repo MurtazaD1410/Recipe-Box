@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\BookmarkController;
+use App\Http\Controllers\CategoryController;
 use App\Http\Controllers\PublicProfileController;
 use App\Http\Controllers\RecipeController;
 use Illuminate\Support\Facades\Route;
@@ -29,6 +30,7 @@ Route::middleware(['auth'])->group(function () {
 Route::get('/recipes', [RecipeController::class, 'index'])->name('recipes.index'); // list recipes
 Route::get('/@{username}/{recipe:slug}', [RecipeController::class, 'show'])->name('recipes.show'); // view one recipe
 Route::get('/@{user:username}', [PublicProfileController::class, 'show'])->name('profile.show');
+Route::get('/category/{category:slug}', [CategoryController::class, 'show'])->name('recipes.by-category');
 
 require __DIR__ . '/settings.php';
 require __DIR__ . '/auth.php';

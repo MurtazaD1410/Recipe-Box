@@ -13,7 +13,7 @@ import { Button } from '@/components/ui/button';
 import AppLayout from '@/layouts/app-layout';
 import { cn } from '@/lib/utils';
 import { bookmark } from '@/routes';
-import recipes from '@/routes/recipes';
+import recipes, { byCategory } from '@/routes/recipes';
 import { BreadcrumbItem, User } from '@/types';
 import { Recipe } from '@/types/types';
 import { Head, router } from '@inertiajs/react';
@@ -103,8 +103,9 @@ const ShowRecipe = ({
                     variant={'secondary'}
                     key={category.id}
                     className="text-sm"
+                    asChild
                   >
-                    {category.name}
+                    <a href={byCategory(category.slug).url}>{category.name}</a>
                   </Badge>
                 );
               })}

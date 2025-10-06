@@ -85,4 +85,36 @@ class Recipe extends Model implements HasMedia
         return $this->belongsToMany(Category::class);
     }
 
+
+    public function toApiArray($user = null)
+    {
+        $user = $user ?: auth()->user();
+
+        return [
+            'id' => $this->id,
+            'title' => $this->title,
+            'slug' => $this->slug,
+            'description' => $this->description,
+            'ingredients' => $this->ingredients,
+            'instructions' => $this->instructions,
+            'user' => [
+                ...$this->user->toArray(),
+                'avatarPreview' => $this->user->imageUrl('avatar'),
+                'avatarLarge' => $this->user->imageUrl('large'),
+            ],
+            'categories' => $this->categories->map(fn($category) => [
+                'id' => $category->id,
+                'name' => $category->name,
+                'slug' => $category->slug,
+            ]),
+            'cooking_time' => $this->cooking_time,
+            'serves' => $this->serves,
+            'created_at' => $this->created_at,
+            'updated_at' => $this->updated_at,
+            'image_preview' => $this->imageUrl('preview'),
+            'image_large' => $this->imageUrl('large'),
+            'has_image' => $this->imageUrl() !== null,
+            'has_bookmarked' => auth()->user()?->hasBookmarked($this) ? true : false,
+        ];
+    }
 }
