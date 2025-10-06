@@ -3,6 +3,7 @@ import recipes from '@/routes/recipes';
 import { Recipe } from '@/types/types';
 import { ArrowRight } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
+import { Badge } from './ui/badge';
 import { Button } from './ui/button';
 
 interface Props {
@@ -43,6 +44,37 @@ const RecipeCard = ({ recipe }: Props) => {
         <p className="line-clamp-3 font-normal text-gray-700 dark:text-gray-400">
           {recipe.description}
         </p>
+        {recipe.categories.length > 0 && (
+          <div className="flex flex-wrap gap-2">
+            {recipe.categories.map((category) => {
+              return (
+                <Badge
+                  variant={'secondary'}
+                  key={category.id}
+                  className="bg-background text-sm"
+                >
+                  {category.name}
+                </Badge>
+              );
+            })}
+          </div>
+        )}
+        {/* Posted by section */}
+        <div className="flex flex-row items-center gap-2">
+          <Avatar className="size-10">
+            <AvatarImage src={recipe.user.avatarPreview ?? undefined} />
+            <AvatarFallback className="bg-muted-foreground">
+              {recipe.user.name.split(' ')[0][0].toUpperCase()}
+              {recipe.user.name.split(' ')[1][0].toUpperCase()}
+            </AvatarFallback>
+          </Avatar>
+          <a
+            href={profile.show(recipe.user.username).url}
+            className="truncate text-sm hover:underline"
+          >
+            {recipe.user.name}
+          </a>
+        </div>
         <Button asChild className="w-full max-w-xs">
           <a
             href={
@@ -56,22 +88,6 @@ const RecipeCard = ({ recipe }: Props) => {
             <ArrowRight className="size-4" />
           </a>
         </Button>
-        {/* Posted by section */}
-        <div className="flex flex-row items-center gap-2">
-          <Avatar className="size-10">
-            <AvatarImage src={recipe.user.avatar ?? undefined} />
-            <AvatarFallback className="bg-muted-foreground">
-              {recipe.user.name.split(' ')[0][0].toUpperCase()}
-              {recipe.user.name.split(' ')[1][0].toUpperCase()}
-            </AvatarFallback>
-          </Avatar>
-          <a
-            href={profile.show(recipe.user.username).url}
-            className="truncate text-sm hover:underline"
-          >
-            {recipe.user.name}
-          </a>
-        </div>
       </div>
     </div>
   );

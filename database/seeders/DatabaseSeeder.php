@@ -28,12 +28,9 @@ class DatabaseSeeder extends Seeder
 
         );
 
-        $categories = [
+        $this->call([
+            CategorySeeder::class,
+        ]);
 
-        ];
-
-        foreach ($categories as $category) {
-            Category::create(['name' => $category]);
-        }
     }
 }

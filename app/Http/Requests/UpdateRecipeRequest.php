@@ -3,6 +3,7 @@
 namespace App\Http\Requests;
 
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule;
 
 class UpdateRecipeRequest extends FormRequest
 {
@@ -34,6 +35,8 @@ class UpdateRecipeRequest extends FormRequest
                 'image',
                 'max:2048',
             ],
+            'category_ids' => ['nullable', 'array'],
+            'category_ids.*' => ['integer', Rule::exists('categories', 'id')],
         ];
     }
 }
