@@ -8,17 +8,32 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import AppLayout from '@/layouts/app-layout';
 import { cn } from '@/lib/utils';
 import { bookmark } from '@/routes';
+import profile from '@/routes/profile';
 import recipes, { byCategory } from '@/routes/recipes';
 import { BreadcrumbItem, User } from '@/types';
 import { Recipe } from '@/types/types';
 import { Head, router } from '@inertiajs/react';
 import { Bookmark, Clock3Icon, UtensilsCrossed } from 'lucide-react';
 import { useState } from 'react';
+
+const nonLinearIngredients = [
+  'salt',
+  'chili',
+  'garam masala',
+  'pepper',
+  'vinegar',
+  'soy sauce',
+  'lemon',
+  'lime',
+  'ginger',
+  'garlic',
+];
 
 const ShowRecipe = ({
   recipe,
@@ -27,6 +42,7 @@ const ShowRecipe = ({
   recipe: Recipe;
   auth: { user: User };
 }) => {
+  const [servings, setServings] = useState(recipe.serves || 1);
   const [showConfirmDialog, setShowConfirmDialog] = useState(false);
 
   const breadcrumbs: BreadcrumbItem[] = [
@@ -40,7 +56,30 @@ const ShowRecipe = ({
     router.post(bookmark(recipe.id).url);
   };
 
-  console.log(recipe);
+  function scaleIngredients(
+    ingredients: string,
+    baseServings: number,
+    newServings: number,
+  ) {
+    const factor = newServings / baseServings;
+
+    return ingredients.split(',').map((ingredient) => {
+      const lower = ingredient.toLowerCase();
+      const isStrongFlavor = nonLinearIngredients.some((flavor) =>
+        lower.includes(flavor),
+      );
+
+      // Apply reduced scaling for strong flavor ingredients
+      const adjustedFactor = isStrongFlavor
+        ? 1 + (factor - 1) * 0.75 // e.g., doubling (2x) becomes 1.75x
+        : factor;
+
+      return ingredient.replace(/(\d+(\.\d+)?)/g, (match) => {
+        const newValue = parseFloat(match) * adjustedFactor;
+        return newValue % 1 === 0 ? String(newValue) : newValue.toFixed(2);
+      });
+    });
+  }
 
   const handleDelete = () => {
     router.delete(recipes.destroy(recipe.id).url, {
@@ -56,12 +95,16 @@ const ShowRecipe = ({
   return (
     <AppLayout breadcrumbs={breadcrumbs}>
       <Head title={recipe.title} />
-      <div className="mx-auto w-full max-w-5xl space-y-4 p-4">
+      <div className="mx-auto w-full max-w-5xl space-y-4 p-4 pb-10">
         <div className="overflow-hidden rounded-lg">
-          <img src={recipe.image_large as string} alt="" />
+          <img
+            src={recipe.image_large as string}
+            alt=""
+            className="aspect-square items-center object-cover"
+          />
         </div>
         {/* title */}
-        <div className="flex flex-col space-y-2">
+        <div className="flex flex-col space-y-3">
           <div className="flex flex-row items-center justify-between">
             <span className="text-2xl font-bold lg:text-4xl">
               {recipe.title}
@@ -127,11 +170,47 @@ const ShowRecipe = ({
           </div>
         </div>
         <div className="w-full border border-border"></div>
+        <div className="flex flex-row items-center gap-2">
+          <Avatar className="size-10">
+            <AvatarImage src={recipe.user.avatarPreview ?? undefined} />
+            <AvatarFallback className="bg-muted-foreground">
+              {recipe.user.name.split(' ')[0][0].toUpperCase()}
+              {recipe.user.name.split(' ')[1][0].toUpperCase()}
+            </AvatarFallback>
+          </Avatar>
+          <a
+            href={profile.show(recipe.user.username).url}
+            className="truncate text-sm hover:underline"
+          >
+            {recipe.user.name}
+          </a>
+        </div>
+        <div className="w-full border border-border"></div>
         <div className="flex flex-col space-y-2">
           <span className="text-2xl font-medium">Ingredients</span>
 
+          <div className="flex items-center gap-2">
+            <label className="text-sm opacity-75">Servings:</label>
+            <input
+              style={{}}
+              min={1}
+              value={servings}
+              onChange={(e) => setServings(Number(e.target.value))}
+              className="w-16 rounded-md border px-2 py-1 text-center"
+            />
+          </div>
+
           <ul className="list-inside list-disc space-y-1">
-            {recipe.ingredients.split(',').map((ingredient, index) => (
+            {/* {recipe.ingredients.split(',').map((ingredient, index) => (
+              <li key={index} className="list-none opacity-80">
+                {ingredient.trim()}
+              </li>
+            ))} */}
+            {scaleIngredients(
+              recipe.ingredients,
+              Number(recipe.serves),
+              Number(servings),
+            ).map((ingredient, index) => (
               <li key={index} className="list-none opacity-80">
                 {ingredient.trim()}
               </li>

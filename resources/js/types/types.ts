@@ -31,10 +31,10 @@ export interface Recipe {
   description: string;
   ingredients: string;
   instructions: string;
-  cooking_time: string | null;
-  serves: string | null;
-  image_preview: string | null;
-  image_large: string | null;
+  cooking_time: string;
+  serves: string;
+  image_preview: string;
+  image_large: string;
   has_image: boolean;
   has_bookmarked: boolean;
   user_id: number;
