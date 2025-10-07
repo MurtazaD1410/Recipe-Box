@@ -90,7 +90,7 @@ const RecipeIndex = ({
   return (
     <AppLayout breadcrumbs={breadcrumbs}>
       <Head title={page_title} />
-      <div className="space-y-4 p-4">
+      <div className="space-y-4 p-4 pb-10">
         <div className="flex justify-between">
           <span className="text-2xl font-bold">
             {page_title === 'Category' && context && context !== 'all'
@@ -116,6 +116,7 @@ const RecipeIndex = ({
             onChange={(e) => setSearchQuery(e.target.value)}
           />
           <Button
+            className="w-full max-w-[200px]"
             variant={'outline'}
             onClick={() => onSearchSubmit(searchQuery)}
           >
@@ -166,8 +167,8 @@ const RecipeIndex = ({
             </Empty>
           </div>
         )}
+        <Pagination pagination={recipesList} />
       </div>
-      <Pagination pagination={recipesList} />
     </AppLayout>
   );
 };
